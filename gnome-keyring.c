@@ -7,20 +7,12 @@
 #include <signal.h>
 #include <core.h>
 
-#include <gtkaccount.h>
-
 #include <gnome-keyring.h>
 #include <glib.h>
 #include <string.h>
 
-struct container {
-    gboolean reenable;
-    PurpleAccount *account;
-};
-
-
 /* function prototypes */
-static void password_sync(struct container *cont);
+static void password_sync(PurpleAccount *account);
 static void password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data);
 static void password_store(PurpleAccount *account, char *password);
@@ -36,29 +28,18 @@ static gboolean plugin_load(PurplePlugin *plugin){
 
     GList *accountsList;
     void *accountshandle = purple_accounts_get_handle();
-    const char *ui = purple_core_get_ui();
     
     /* for every account */
     for (accountsList = purple_accounts_get_all();
          accountsList != NULL;
          accountsList = accountsList->next) {
         PurpleAccount *account = (PurpleAccount *)accountsList->data;
-        struct container *cont = (struct container *)malloc(
-                sizeof(struct container));
-        /* each account will be temorarily disabled, but the current state
-         * will be stored with the account information in the container
-         * cont
-         * the disabled accounts will later be reenabled
-         */
-        cont->account = account;
-        cont->reenable = purple_account_get_enabled(account, ui);
-        purple_account_set_enabled(account, ui, FALSE);
         
         /* set the account to not remember passwords */
         purple_account_set_remember_password(account, FALSE);
         
         /* synchronize the passwords for each account */
-        password_sync(cont);
+        password_sync(account);
         
     }
 
@@ -71,13 +52,12 @@ static gboolean plugin_load(PurplePlugin *plugin){
 }
 
 /* synchronize passwords */
-static void password_sync(struct container *cont) {
+static void password_sync(PurpleAccount *account) {
     gnome_keyring_find_password(GNOME_KEYRING_NETWORK_PASSWORD,
             password_find_cb,
-            cont, NULL,
-
-            "user", cont->account->username,
-            "protocol", cont->account->protocol_id,
+            account, NULL,
+            "user", account->username,
+            "protocol", account->protocol_id,
             NULL);
 }
 
@@ -86,9 +66,10 @@ static void password_sync(struct container *cont) {
  */
 static void password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data) {
-    struct container *cont = (struct container *)user_data;
-    PurpleAccount *account = cont->account;
-    const char *ui = purple_core_get_ui();
+    
+
+    PurpleAccount *account = (PurpleAccount *)user_data;
+    
     /* if the password was found on the keyring
      * and the password does not exist in pidgin
      */
@@ -103,17 +84,6 @@ static void password_find_cb(GnomeKeyringResult res,
         /* copy it from pidgin to the keyring */
         password_store(account, account->password);
     }
-    /* if the account was enabled before, reenable it */
-    if (cont->reenable) purple_account_set_enabled(account, ui, TRUE);
-
-    /* annoying feature - whenever all of the accounts are disabled, the
-     * accounts windows opens up in pidgin
-     * therefore if it is pidgin (the gtk ui), close the window
-     */
-    if (strstr(ui, "gtk") != NULL) {
-        pidgin_accounts_window_hide();
-    }
-
 }
 
 /* store a password in the keyring */
@@ -177,7 +147,7 @@ static PurplePluginInfo info = {
     
     "core-gnome-keyring",
     "Gnome Keyring",
-    "1.03",
+    "1.04",
 
     "Save passwords to gnome keyring instead of as plaintext",
     "Save passwords to gnome keyring instead of as plaintext",
