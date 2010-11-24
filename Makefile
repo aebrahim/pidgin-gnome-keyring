@@ -1,10 +1,10 @@
 CC = gcc
 TARGET = gnome-keyring
 
-CFLAGS = -I/usr/include/libpurple -I/usr/local/include/libpurple -I/usr/include/gnome-keyring-1 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include -I/usr/local/include/glib-2.0 -I/usr/local/lib/glib-2.0/include -I/usr/local/include 
+CFLAGS = -I/usr/include/libpurple -I/usr/local/include/libpurple -I/usr/include/gnome-keyring-1 -I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include -I/usr/include -I/usr/local/include/glib-2.0 -I/usr/local/lib/glib-2.0/include -I/usr/local/include -I/usr/include/pidgin
 
 
-all:   ${TARGET}.so install
+all: ${TARGET}.so
 
 install: ${TARGET}.so
 	cp ${TARGET}.so ~/.purple/plugins/
