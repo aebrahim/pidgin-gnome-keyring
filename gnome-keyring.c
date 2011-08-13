@@ -52,8 +52,7 @@ static gboolean plugin_load(PurplePlugin *plugin){
         
 
     /* create a signal which monitors whenever an account signs in,
-     * so that the callback function can synchronize accounts
-     */
+     * so that the callback function can store/update the password */
     purple_signal_connect(accountshandle, "account-signed-on", plugin,
             PURPLE_CALLBACK(sign_in_cb), NULL); 
     return TRUE;
@@ -91,6 +90,7 @@ static void sign_in_cb(PurpleAccount *account, gpointer data) {
             NULL);
 }
 
+/* makes sure a copy of the password is stored in the keyring */
 static void password_ensure_save_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data) {
     PurpleAccount *account = (PurpleAccount *)user_data;
@@ -101,6 +101,13 @@ static void password_ensure_save_cb(GnomeKeyringResult res,
         /* copy it from pidgin to the keyring */
         password_store(account, account->password);
         return;
+    }
+   /* if the stored passwords do not match */
+    if (res == GNOME_KEYRING_RESULT_OK && account->password != NULL) {
+        if (strcmp(password, account->password) != 0) {
+            /* update the keyring with the pidgin password */
+            password_store(account, account->password);
+        }
     }
 }
 
@@ -121,7 +128,7 @@ static PurplePluginInfo info = {
     
     "core-gnome-keyring",
     "Gnome Keyring",
-    "1.04",
+    "1.06",
 
     "Save passwords to gnome keyring instead of as plaintext",
     "Save passwords to gnome keyring instead of as plaintext",
