@@ -51,6 +51,8 @@ date = logentry.getElementsByTagName("date")[0].firstChild.nodeValue
 date = date.replace(re.findall("\.[0-9]*Z$", date)[0], "")
 date = time.strptime(date, "%Y-%m-%dT%H:%M:%S")
 date= time.strftime("%a, %d %b %Y %X", date)
-print >>changelog, " -- %s <%s>  %s" %(authorname, email, date)
+print >>changelog, " -- %s <%s>  %s +0000" %(authorname, email, date)
 changelog.close()
+os.system("cd %s; debuild -S" %dirname)
+
 

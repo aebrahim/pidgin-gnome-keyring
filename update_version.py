@@ -2,18 +2,19 @@
 """updates the line below /* version */ in source code with svnversion"""
 import re
 import fileinput
+import os
 
 base_version = 1
 
 def get_svn_version():
-    svnfile = open(".svn/entries", "r")
-    version = svnfile.readline().strip()
-    svnfile.close()
-    return int(version)
+    res=os.popen("svnversion")
+    return res.read().strip()
 
-# the version number should be one more than the current svn version
-version = get_svn_version() + 1
-version = str(base_version)+"."+str(version)
+svn_version = get_svn_version()
+# if there has been an update, increment
+if svn_version[-1].lower() == "M":
+    svn_version = str(int(svn_version[0:-2]) + 1)
+version = str(base_version)+"."+svn_version
 source_file = fileinput.input("gnome-keyring.c", inplace = 1)
 finder = re.compile("/\* version \*/").findall
 found  = False
