@@ -1,7 +1,6 @@
 CC = gcc
 TARGET = gnome-keyring
 
-GLIBFLAGS = `pkg-config --libs --cflags glib2.0`
 KEYRINGFLAGS = `pkg-config --libs --cflags gnome-keyring-1`
 PURPLEFLAGS = `pkg-config --cflags purple`
 

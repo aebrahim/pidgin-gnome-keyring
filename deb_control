@@ -1,0 +1,15 @@
+Source: pidgin-gnome-keyring
+Section: universe/net
+Priority: optional
+Maintainer: ali <ali.ebrahim314@gmail.com>
+Build-Depends: debhelper (>= 7.0.50~), pkg-config, libgnome-keyring-dev, libpurple-dev
+Standards-Version: 3.9.1
+Homepage: http://code.google.com/p/pidgin-gnome-keyring/
+Vcs-svn: http://pidgin-gnome-keyring.googlecode.com/svn/trunk/
+Vcs-Browser: http://code.google.com/p/pidgin-gnome-keyring/source/browse/trunk
+
+Package: pidgin-gnome-keyring
+Architecture: any
+Depends: ${misc:Depends}, libgnome-keyring0, libpurple0
+Description: integrates pidgin (and libpurple) with the GNOME keyring
+ Pidgin usually stores passwords as plaintext with the "save password" function. This plugin instead saves all passwords to the gnome keyring, which some would argue is a more secure form of password storage. 

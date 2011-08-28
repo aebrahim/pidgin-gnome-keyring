@@ -27,7 +27,7 @@ static gboolean plugin_load(PurplePlugin *plugin){
     void *accountshandle = purple_accounts_get_handle();
     
     /* The first thing to do is set all the passwords.
-     * This part is purposely written to be locking, as if pidgin
+     * This part is purposely written to be locking. If pidgin
      * tries to connect without a password it will result in annoying
      * prompts */
 
@@ -128,11 +128,12 @@ static PurplePluginInfo info = {
     
     "core-gnome-keyring",
     "Gnome Keyring",
-    "1.06",
+    /* version */
+    "1.11",
 
     "Save passwords to gnome keyring instead of as plaintext",
     "Save passwords to gnome keyring instead of as plaintext",
-    "noobster721@gmail.com",
+    "Ali Ebrahim",
     "http://code.google.com/p/pidgin-gnome-keyring/",     
     
     plugin_load,                   
