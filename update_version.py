@@ -12,8 +12,8 @@ def get_svn_version():
 
 svn_version = get_svn_version()
 # if there has been an update, increment
-if svn_version[-1].lower() == "M":
-    svn_version = str(int(svn_version[0:-2]) + 1)
+if svn_version[-1].lower() == "m":
+    svn_version = str(int(svn_version[0:-1]) + 1)
 version = str(base_version)+"."+svn_version
 source_file = fileinput.input("gnome-keyring.c", inplace = 1)
 finder = re.compile("/\* version \*/").findall

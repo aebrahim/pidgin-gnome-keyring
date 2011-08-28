@@ -129,7 +129,7 @@ static PurplePluginInfo info = {
     "core-gnome-keyring",
     "Gnome Keyring",
     /* version */
-    "1.11M",
+    "1.13",
 
     "Save passwords to gnome keyring instead of as plaintext",
     "Save passwords to gnome keyring instead of as plaintext",

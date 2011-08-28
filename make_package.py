@@ -7,14 +7,20 @@ import xml.dom.minidom
 import re
 import time
 
-version_str = str(update_version.base_version)
-version_str += "."
-version_str += str(update_version.get_svn_version())
-
+# declare strings up here
 ubuntuname = "natty"
 authorname = "Ali Ebrahim"
-
 basename = "pidgin-gnome-keyring"
+installdir = "/usr/lib/libpurple-2/"
+
+# get the svn version
+svn_version = str(update_version.get_svn_version())
+if svn_version[-1].lower() == "m":
+    svn_version = svn_version[0:-1]
+version_str = str(update_version.base_version)
+version_str += "."
+version_str += svn_version
+
 dirname = basename + "-" + version_str
 tarname = basename + "_" + version_str + ".orig"
 debname = dirname + "/debian/"
@@ -23,12 +29,27 @@ if os.path.isdir(dirname):
    os.system("rm -rf " + dirname) 
 os.mkdir(dirname)
 shutil.copy2("gnome-keyring.c", dirname)
-shutil.copy2("Makefile", dirname)
+# copy everything in Makefile except for the install part at the end
+makefile_src = open("Makefile","r")
+makefile_dest = open(dirname+"/Makefile","w")
+for line in makefile_src:
+    if re.match("install:", line) is not None:
+        break
+    makefile_dest.write(line)
+makefile_src.close(); makefile_dest.close()
+
 shutil.make_archive(tarname, "gztar", root_dir=dirname)
+# run dh_make
 os.system("cd %s; dh_make -m" %dirname)
+# remove extra files and copy source files
 os.system("cd %s; rm -rf *.ex *.EX README*" %debname)
 shutil.copy2("deb_control", debname+"control")
 shutil.copy2("deb_copyright", debname+"copyright")
+# make the dirs and install files
+os.system("echo '%s' > %sdirs" %(installdir, debname))
+os.system("echo 'debian/../gnome-keyring.so %s' > %sinstall" \
+        %(installdir, debname))
+
 # generate the change log in the appropriate format
 os.system("svn log --xml > log.xml")
 logfile = open("log.xml", "r")
