@@ -11,7 +11,7 @@ import time
 ubuntuname = "natty"
 authorname = "Ali Ebrahim"
 basename = "pidgin-gnome-keyring"
-installdir = "/usr/lib/libpurple-2/"
+installdir = "/usr/lib/purple-2/"
 
 # get the svn version
 svn_version = str(update_version.get_svn_version())
