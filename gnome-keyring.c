@@ -12,11 +12,12 @@
 #include <string.h>
 
 /* function prototypes */
-static void password_store(PurpleAccount *account, char *password);
-static void password_store_cb(GnomeKeyringResult res, gpointer user_data);
+static void keyring_password_store(PurpleAccount *account, char *password);
 static void sign_in_cb(PurpleAccount *account, gpointer data);
-static void password_ensure_save_cb(GnomeKeyringResult res,
+static void keyring_password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data);
+static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data);
+static void connecting_cb(PurpleAccount *account, gpointer data);
 
 /* function definitions */
 
@@ -25,64 +26,77 @@ static gboolean plugin_load(PurplePlugin *plugin){
 
     GList *accountsList;
     void *accountshandle = purple_accounts_get_handle();
+    /* notFound will be a list of accounts not found 
+     * in the keyring */
+    GList *notFound = NULL;
+    GList *notFound_iter;
     
     /* The first thing to do is set all the passwords.
      * This part is purposely written to be locking. If pidgin
      * tries to connect without a password it will result in annoying
      * prompts */
-
     for (accountsList = purple_accounts_get_all();
          accountsList != NULL;
          accountsList = accountsList->next) {
         PurpleAccount *account = (PurpleAccount *)accountsList->data;
         gchar *password;
         GnomeKeyringResult res;
-
-        /* set the account to not remember passwords */
-        purple_account_set_remember_password(account, FALSE);
-
-        /* update the password if it exists in the keyring */
+        /* if the password exists in the keyring, set it in pidgin */
         res = gnome_keyring_find_password_sync(GNOME_KEYRING_NETWORK_PASSWORD,
                 &password, "user", account->username,
                 "protocol", account->protocol_id, NULL);
         if (res == GNOME_KEYRING_RESULT_OK) {
+            /* set the account to not remember passwords */
+            purple_account_set_remember_password(account, FALSE);
+            /* temporarily set a fake password, then the real one */
+            purple_account_set_password(account, "fakedoopdeedoop");
+            purple_account_set_password(account, password);
+        }
+        else {
+            /* add to the list of accounts not found in the keyring */
+            notFound = g_list_append(notFound, account);
+        }
+    }
+    /* for the acccounts which were not found in the keyring */
+    for (notFound_iter = g_list_first(notFound);
+         notFound_iter != NULL;
+         notFound_iter = notFound_iter->next) {
+        PurpleAccount *account = (PurpleAccount *)notFound_iter->data;
+        /* if the password was saved by libpurple before then 
+         * save it in the keyring, and tell libpurple to forget it */
+        if (purple_account_get_remember_password(account)) {
+            gchar *password = g_strdup(account->password);
+            keyring_password_store(account, password);
+            purple_account_set_remember_password(account, FALSE);
+            /* temporarily set a fake password, then the real one again */
+            purple_account_set_password(account, "fakedoopdeedoop");
             purple_account_set_password(account, password);
         }
     }
-        
+    /* done with the notFound, so free it */
+    g_list_free(notFound);
 
     /* create a signal which monitors whenever an account signs in,
      * so that the callback function can store/update the password */
     purple_signal_connect(accountshandle, "account-signed-on", plugin,
             PURPLE_CALLBACK(sign_in_cb), NULL); 
+    /* create a signal which monitors whenever an account tries to connect
+     * so that the callback can make sure the password is set in pidgin */
+    purple_signal_connect(accountshandle, "account-connecting", plugin,
+            PURPLE_CALLBACK(connecting_cb), NULL);
+    /* at this point, the plugin is set up */
     return TRUE;
 }
 
 
-/* store a password in the keyring */
-static void password_store(PurpleAccount *account, char *password) {
-    gnome_keyring_store_password(
-            GNOME_KEYRING_NETWORK_PASSWORD,
-            GNOME_KEYRING_DEFAULT,
-            "pidgin account password",
-            password,
-            password_store_cb,
-            NULL, NULL,
-            
-            "user", account->username,
-            "protocol", account->protocol_id,
-            NULL);
-}
-
-static void password_store_cb(GnomeKeyringResult res, gpointer user_data) {
-    return;
-}
-
 /* callback to whenever an account is signed in */
 static void sign_in_cb(PurpleAccount *account, gpointer data) {
-    /* whenever an account is signed in, make sure the password is saved */
+    /* Get the password.
+     * The callback will check to see if it is already
+     * saved in the keyring.
+     * This will be run every time an account signs in. */
     gnome_keyring_find_password(GNOME_KEYRING_NETWORK_PASSWORD,
-            password_ensure_save_cb,
+            keyring_password_find_cb,
             account, NULL,
 
             "user", account->username,
@@ -90,27 +104,72 @@ static void sign_in_cb(PurpleAccount *account, gpointer data) {
             NULL);
 }
 
-/* makes sure a copy of the password is stored in the keyring */
-static void password_ensure_save_cb(GnomeKeyringResult res,
+/* callback to gnome keyring password finder
+ * Will sync the password between the keyring and pidgin */
+static void keyring_password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data) {
     PurpleAccount *account = (PurpleAccount *)user_data;
+    gboolean remember = purple_account_get_remember_password(account);
+    
     /* if the password was not found in the keyring
      * and the password exists in pidgin
+     * and the password was set to be remembered
      */
-    if (res != GNOME_KEYRING_RESULT_OK && account->password != NULL) {
+    if (res != GNOME_KEYRING_RESULT_OK &&
+        account->password != NULL
+        && remember) {
         /* copy it from pidgin to the keyring */
-        password_store(account, account->password);
+        keyring_password_store(account, account->password);
         return;
     }
    /* if the stored passwords do not match */
     if (res == GNOME_KEYRING_RESULT_OK && account->password != NULL) {
         if (strcmp(password, account->password) != 0) {
             /* update the keyring with the pidgin password */
-            password_store(account, account->password);
+            keyring_password_store(account, account->password);
+        }
+    }
+    /* set the purple account to not remember passwords */
+    purple_account_set_remember_password(account, FALSE);
+}
+
+/* store a password in the keyring */
+static void keyring_password_store(PurpleAccount *account,
+                                   char *password) {
+    gnome_keyring_store_password(
+            GNOME_KEYRING_NETWORK_PASSWORD,
+            GNOME_KEYRING_DEFAULT,
+            "pidgin account password",
+            password, keyring_password_store_cb,
+            NULL, NULL,
+            
+            "user", account->username,
+            "protocol", account->protocol_id,
+            NULL);
+}
+
+/* this is mainly here for stability issues because the program may
+ * crash if there is no callback function.
+ * It does not actually do anything */
+static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data) {
+    return;
+}
+
+/* callback to whenever a function tries to connect
+ * this needs to ensure that there is a password
+ * this may happen if the password was disabled, then later re-enabled */
+static void connecting_cb(PurpleAccount *account, gpointer data) {
+    if (account->password == NULL) {
+        gchar *password;
+        GnomeKeyringResult res = gnome_keyring_find_password_sync(
+            GNOME_KEYRING_NETWORK_PASSWORD, &password,
+            "user", account->username,
+            "protocol", account->protocol_id, NULL);
+        if (res == GNOME_KEYRING_RESULT_OK) {
+            purple_account_set_password(account, password);
         }
     }
 }
-
 
 static gboolean plugin_unload(PurplePlugin *plugin) {
     return TRUE;
@@ -129,10 +188,10 @@ static PurplePluginInfo info = {
     "core-gnome-keyring",
     "Gnome Keyring",
     /* version */
-    "1.16",
+    "1.17",
 
-    "Save passwords to gnome keyring instead of as plaintext",
-    "Save passwords to gnome keyring instead of as plaintext",
+    "Save passwords to the gnome keyring instead of as plaintext",
+    "Save passwords to the gnome keyring instead of as plaintext",
     "Ali Ebrahim",
     "http://code.google.com/p/pidgin-gnome-keyring/",     
     
@@ -143,11 +202,11 @@ static PurplePluginInfo info = {
     NULL,                          
     NULL,                          
     NULL,                        
-    NULL,                   
-    NULL,                          
-    NULL,                          
-    NULL,                          
-    NULL                           
+    NULL,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };                               
     
 static void                        
