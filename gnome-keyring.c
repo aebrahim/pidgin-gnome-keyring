@@ -18,12 +18,13 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data);
 static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data);
 static void connecting_cb(PurpleAccount *account, gpointer data);
+static void memory_clearing_function(PurpleAccount *account);
+static PurplePluginPrefFrame * get_pref_frame(PurplePlugin *plugin);
 
 /* function definitions */
 
 /* function called when the plugin starts */
-static gboolean plugin_load(PurplePlugin *plugin){
-
+static gboolean plugin_load(PurplePlugin *plugin) {
     GList *accountsList;
     void *accountshandle = purple_accounts_get_handle();
     /* notFound will be a list of accounts not found 
@@ -110,7 +111,8 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
         const gchar *password, gpointer user_data) {
     PurpleAccount *account = (PurpleAccount *)user_data;
     gboolean remember = purple_account_get_remember_password(account);
-    
+    /* set the purple account to not remember passwords */
+    purple_account_set_remember_password(account, FALSE);
     /* if the password was not found in the keyring
      * and the password exists in pidgin
      * and the password was set to be remembered
@@ -127,10 +129,13 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
         if (strcmp(password, account->password) != 0) {
             /* update the keyring with the pidgin password */
             keyring_password_store(account, account->password);
+            return;
         }
     }
-    /* set the purple account to not remember passwords */
-    purple_account_set_remember_password(account, FALSE);
+    /* if this code is excecuted, it means that keyring_password_store was
+     * not called, so the memory_clearing_function needs to be called now
+     */
+    memory_clearing_function(account);
 }
 
 /* store a password in the keyring */
@@ -141,7 +146,7 @@ static void keyring_password_store(PurpleAccount *account,
             GNOME_KEYRING_DEFAULT,
             "pidgin account password",
             password, keyring_password_store_cb,
-            NULL, NULL,
+            account, NULL,
             
             "user", account->username,
             "protocol", account->protocol_id,
@@ -152,7 +157,20 @@ static void keyring_password_store(PurpleAccount *account,
  * crash if there is no callback function.
  * It does not actually do anything */
 static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data) {
+    PurpleAccount *account = (PurpleAccount *)data;
+    memory_clearing_function(account);
     return;
+}
+
+static void memory_clearing_function(PurpleAccount *account) {
+    gboolean clear_memory = purple_prefs_get_bool(
+                            "/plugins/core/gnome-keyring/clear_memory");
+    if (clear_memory) {
+        if (account->password != NULL) {
+            free(account->password);
+            account->password = NULL;
+        }
+    }
 }
 
 /* callback to whenever a function tries to connect
@@ -171,14 +189,36 @@ static void connecting_cb(PurpleAccount *account, gpointer data) {
     }
 }
 
+
 static gboolean plugin_unload(PurplePlugin *plugin) {
+    /* disconnect from signals */
+    void *accounts_handle = purple_accounts_get_handle();
+    purple_signal_disconnect(accounts_handle, "account-signed-on",
+                             plugin, NULL);
+    purple_signal_disconnect(accounts_handle, "account-connecting",
+                             plugin, NULL);
     return TRUE;
 }
 
+static PurplePluginUiInfo prefs_info = {
+    get_pref_frame, 0, NULL, NULL, NULL, NULL, NULL
+};
+
+static PurplePluginPrefFrame * get_pref_frame(PurplePlugin *plugin) {
+    PurplePluginPrefFrame *frame = purple_plugin_pref_frame_new();
+    gchar *label = g_strdup_printf("Should passwords be wiped from pidgin's"
+               " memory?\nNote: enabling this setting might break things,\n"
+               "as some functions might need the password to be in memory.");
+    PurplePluginPref *pref = purple_plugin_pref_new_with_name_and_label(
+            "/plugins/core/gnome-keyring/clear_memory",
+            label);
+    purple_plugin_pref_frame_add(frame, pref);
+    return frame;
+}
+
+
 static PurplePluginInfo info = {
-    PURPLE_PLUGIN_MAGIC,
-    PURPLE_MAJOR_VERSION,
-    PURPLE_MINOR_VERSION,
+    PURPLE_PLUGIN_MAGIC, PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION,
     PURPLE_PLUGIN_STANDARD,
     NULL,
     0,
@@ -188,7 +228,7 @@ static PurplePluginInfo info = {
     "core-gnome-keyring",
     "Gnome Keyring",
     /* version */
-    "1.17",
+    "1.20",
 
     "Save passwords to the gnome keyring instead of as plaintext",
     "Save passwords to the gnome keyring instead of as plaintext",
@@ -198,10 +238,9 @@ static PurplePluginInfo info = {
     plugin_load,                   
     plugin_unload,                          
     NULL,                          
-                                   
     NULL,                          
     NULL,                          
-    NULL,                        
+    &prefs_info,                        
     NULL,
     NULL,
     NULL,
@@ -209,9 +248,9 @@ static PurplePluginInfo info = {
     NULL
 };                               
     
-static void                        
-init_plugin(PurplePlugin *plugin)
-{                                  
+static void init_plugin(PurplePlugin *plugin) {                       
+    purple_prefs_add_none("/plugins/core/gnome-keyring");
+    purple_prefs_add_bool("/plugins/core/gnome-keyring/clear_memory", FALSE);
 }
 
 PURPLE_INIT_PLUGIN(gnome-keyring, init_plugin, info)
