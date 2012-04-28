@@ -3,11 +3,11 @@ Upstream-Name: pidgin-gnome-keyring
 Source: http://code.google.com/p/pidgin-gnome-keyring/
 
 Files: *
-Copyright: 2011 ali <ali.ebrahim314@gmail.com>
+Copyright: 2012 ali <ali.ebrahim314@gmail.com>
 License: GPL-2.0+
 
 Files: debian/*
-Copyright: 2011 ali <ali.ebrahim314@gmail.com>
+Copyright: 2012 ali <ali.ebrahim314@gmail.com>
 License: GPL-2.0+
 
 License: GPL-2.0+
