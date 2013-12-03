@@ -233,10 +233,10 @@ static PurplePluginInfo info = {
     "core-gnome-keyring",
     "Gnome Keyring",
     VERSION,
-    "Save passwords to the gnome keyring instead of as plaintext",
-    "Save passwords to the gnome keyring instead of as plaintext",
+    "Save pidgin passwords to the gnome keyring instead of as plaintext",
+    "Save pidgin passwords to the gnome keyring instead of as plaintext",
     "Ali Ebrahim",
-    "http://code.google.com/p/pidgin-gnome-keyring/",     
+    "https://github.com/aebrahim/pidgin-gnome-keyring/",     
     
     plugin_load,                   
     plugin_unload,                          
