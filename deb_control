@@ -1,12 +1,12 @@
 Source: pidgin-gnome-keyring
 Section: universe/net
 Priority: optional
-Maintainer: ali <ali.ebrahim314@gmail.com>
+Maintainer: Ali Ebrahim <ali.ebrahim314@gmail.com>
 Build-Depends: debhelper (>= 7.0.50~), pkg-config, libgnome-keyring-dev, libpurple-dev
 Standards-Version: 3.9.1
-Homepage: http://code.google.com/p/pidgin-gnome-keyring/
-Vcs-svn: http://pidgin-gnome-keyring.googlecode.com/svn/trunk/
-Vcs-Browser: http://code.google.com/p/pidgin-gnome-keyring/source/browse/trunk
+Homepage: https://github.com/aebrahim/pidgin-gnome-keyring/
+Vcs-git: git@github.com:aebrahim/pidgin-gnome-keyring
+Vcs-Browser: https://github.com/aebrahim/pidgin-gnome-keyring/
 
 Package: pidgin-gnome-keyring
 Architecture: any
