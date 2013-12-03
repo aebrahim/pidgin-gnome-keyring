@@ -1,5 +1,9 @@
 #define PURPLE_PLUGINS
 
+#ifndef VERSION
+#define VERSION "experimental"
+#endif
+
 #include <plugin.h>
 #include <version.h>
 
@@ -10,6 +14,7 @@
 #include <gnome-keyring.h>
 #include <glib.h>
 #include <string.h>
+
 
 /* function prototypes */
 static void keyring_password_store(PurpleAccount *account, char *password);
@@ -227,9 +232,7 @@ static PurplePluginInfo info = {
     
     "core-gnome-keyring",
     "Gnome Keyring",
-    /* version */
-    "1.20",
-
+    VERSION,
     "Save passwords to the gnome keyring instead of as plaintext",
     "Save passwords to the gnome keyring instead of as plaintext",
     "Ali Ebrahim",

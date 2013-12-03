@@ -2,6 +2,7 @@ TARGET = gnome-keyring
 
 KEYRINGFLAGS = `pkg-config --libs --cflags gnome-keyring-1`
 PURPLEFLAGS = `pkg-config --cflags purple`
+VERSION = `git describe`
 
 
 all: ${TARGET}.so
@@ -11,7 +12,7 @@ clean:
 	rm -rf pidgin-${TARGET}-*
 
 ${TARGET}.so: ${TARGET}.c
-	${CC} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${KEYRINGFLAGS}
+	${CC} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${KEYRINGFLAGS} -DVERSION=${VERSION}
 
 install: ${TARGET}.so
 	mkdir -p ~/.purple/plugins
