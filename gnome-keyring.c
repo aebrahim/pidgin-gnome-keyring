@@ -15,7 +15,6 @@
 #include <glib.h>
 #include <string.h>
 
-
 /* function prototypes */
 static void keyring_password_store(PurpleAccount *account, char *password);
 static void sign_in_cb(PurpleAccount *account, gpointer data);
@@ -148,7 +147,7 @@ static void keyring_password_store(PurpleAccount *account,
                                    char *password) {
     gnome_keyring_store_password(
             GNOME_KEYRING_NETWORK_PASSWORD,
-            GNOME_KEYRING_DEFAULT,
+            purple_prefs_get_string("/plugins/core/gnome-keyring/keyring_name"),
             "pidgin account password",
             password, keyring_password_store_cb,
             account, NULL,
@@ -211,13 +210,16 @@ static PurplePluginUiInfo prefs_info = {
 
 static PurplePluginPrefFrame * get_pref_frame(PurplePlugin *plugin) {
     PurplePluginPrefFrame *frame = purple_plugin_pref_frame_new();
-    gchar *label = g_strdup_printf("Should passwords be wiped from pidgin's"
-               " memory?\nNote: enabling this setting might break things,\n"
-               "as some functions might need the password to be in memory.");
+    gchar *label = g_strdup_printf("Clear plaintext passwords from memory");
     PurplePluginPref *pref = purple_plugin_pref_new_with_name_and_label(
             "/plugins/core/gnome-keyring/clear_memory",
             label);
     purple_plugin_pref_frame_add(frame, pref);
+    purple_plugin_pref_frame_add(frame,
+		purple_plugin_pref_new_with_name_and_label(
+			"/plugins/core/gnome-keyring/keyring_name", "Keyring name"
+		)
+    );
     return frame;
 }
 
@@ -254,6 +256,7 @@ static PurplePluginInfo info = {
 static void init_plugin(PurplePlugin *plugin) {                       
     purple_prefs_add_none("/plugins/core/gnome-keyring");
     purple_prefs_add_bool("/plugins/core/gnome-keyring/clear_memory", FALSE);
+    purple_prefs_add_string("/plugins/core/gnome-keyring/keyring_name", GNOME_KEYRING_DEFAULT);
 }
 
 PURPLE_INIT_PLUGIN(gnome-keyring, init_plugin, info)

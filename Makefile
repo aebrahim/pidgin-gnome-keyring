@@ -2,12 +2,10 @@ TARGET = gnome-keyring
 
 KEYRINGFLAGS = `pkg-config --libs --cflags gnome-keyring-1`
 PURPLEFLAGS = `pkg-config --cflags purple`
-VERSION = `git describe --tags`
+VERSION = $(shell cat VERSION)
 ifeq ($(strip $(VERSION)),)
-VERSION = `cat  VERSION`
-echo $(VERSION)
+	VERSION = `git describe --tags`
 endif
-
 
 all: ${TARGET}.so
 

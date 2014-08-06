@@ -2,10 +2,10 @@ Source: pidgin-gnome-keyring
 Section: universe/net
 Priority: optional
 Maintainer: Ali Ebrahim <ali.ebrahim314@gmail.com>
-Build-Depends: debhelper (>= 7.0.50~), pkg-config, libgnome-keyring-dev, libpurple-dev
-Standards-Version: 3.9.1
+Build-Depends: debhelper (>= 9), pkg-config, libgnome-keyring-dev, libpurple-dev
+Standards-Version: 3.9.5
 Homepage: https://github.com/aebrahim/pidgin-gnome-keyring/
-Vcs-git: git@github.com:aebrahim/pidgin-gnome-keyring
+Vcs-git: https://github.com/aebrahim/pidgin-gnome-keyring.git
 Vcs-Browser: https://github.com/aebrahim/pidgin-gnome-keyring/
 
 Package: pidgin-gnome-keyring

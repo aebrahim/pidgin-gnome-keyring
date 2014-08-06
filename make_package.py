@@ -9,7 +9,7 @@ import re
 import time
 
 # declare strings up here
-ubuntunames = ["lucid", "natty", "oneiric", "precise", "quantal", "raring", "saucy"]
+ubuntunames = ["lucid", "precise", "quantal", "saucy", "trusty", "utopic"]
 author_name = "Ali Ebrahim"
 email = "ali.ebrahim314@gmail.com"
 basename = "pidgin-gnome-keyring"
@@ -39,14 +39,15 @@ for ubuntuname in ubuntunames:
 
     #shutil.make_archive(tarname, "gztar", root_dir=dirname)
     # run dh_make
-    os.system("cd %s; dh_make -m -c gpl2 --createorig -y -a" %dirname)
+    os.system("cd %s; dh_make -s -c gpl2 --createorig -y -a -e %s" % (dirname, email))
     # remove extra files and copy source files
     os.system("cd %s; rm -rf *.ex *.EX README*" %debname)
     shutil.copy2("deb_control", debname+"control")
     shutil.copy2("deb_copyright", debname+"copyright")
+    shutil.copy2("deb_rules", debname+"rules")
     # make the dirs and install files
     os.system("echo '%s' > %sdirs" %(installdir, debname))
-    os.system("echo 'debian/../gnome-keyring.so %s' > %sinstall" \
+    os.system("echo 'gnome-keyring.so %s' > %sinstall" \
             %(installdir, debname))
     # write the changelog
     changelog = open(debname + "changelog", "w")
@@ -62,6 +63,5 @@ for ubuntuname in ubuntunames:
 		changelog.write(" -- %s <%s>  %s %s\n" % (author_name, email, date, offset))
     changelog.close()
     # call debuild
-    os.system("cd %s; debuild -S" % dirname)
-
+    os.system("cd %s; debuild -S -sa" % dirname)
 
