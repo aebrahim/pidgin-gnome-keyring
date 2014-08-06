@@ -9,7 +9,7 @@ import re
 import time
 
 # declare strings up here
-ubuntunames = ["lucid", "precise", "quantal", "saucy", "trusty", "utopic"]
+ubuntunames = ["precise", "quantal", "trusty", "utopic"]
 author_name = "Ali Ebrahim"
 email = "ali.ebrahim314@gmail.com"
 basename = "pidgin-gnome-keyring"
