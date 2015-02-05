@@ -1,6 +1,6 @@
 TARGET = gnome-keyring
 
-KEYRINGFLAGS = `pkg-config --libs --cflags gnome-keyring-1`
+SECRETFLAGS = `pkg-config --libs --cflags libsecret-1`
 PURPLEFLAGS = `pkg-config --cflags purple`
 VERSION = $(shell cat VERSION)
 ifeq ($(strip $(VERSION)),)
@@ -15,7 +15,7 @@ clean:
 
 ${TARGET}.so: ${TARGET}.c
 
-	${CC} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${KEYRINGFLAGS} -DVERSION=\"${VERSION}\"
+	${CC} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
 
 install: ${TARGET}.so
 	mkdir -p /usr/lib/purple-2/

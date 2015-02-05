@@ -11,16 +11,17 @@
 #include <signal.h>
 #include <core.h>
 
-#include <gnome-keyring.h>
+#include <libsecret/secret.h>
 #include <glib.h>
 #include <string.h>
 
 /* function prototypes */
-static void keyring_password_store(PurpleAccount *account, char *password);
+static void keyring_password_store(PurpleAccount *account, gchar *password);
 static void sign_in_cb(PurpleAccount *account, gpointer data);
-static void keyring_password_find_cb(GnomeKeyringResult res,
-        const gchar *password, gpointer user_data);
-static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data);
+static void keyring_password_find_cb(GObject *source, GAsyncResult *res,
+        gpointer data);
+static void keyring_password_store_cb(GObject *source, GAsyncResult *res,
+        gpointer data);
 static void connecting_cb(PurpleAccount *account, gpointer data);
 static void memory_clearing_function(PurpleAccount *account);
 static PurplePluginPrefFrame * get_pref_frame(PurplePlugin *plugin);
@@ -35,7 +36,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
      * in the keyring */
     GList *notFound = NULL;
     GList *notFound_iter;
-    
+
     /* The first thing to do is set all the passwords.
      * This part is purposely written to be locking. If pidgin
      * tries to connect without a password it will result in annoying
@@ -45,17 +46,22 @@ static gboolean plugin_load(PurplePlugin *plugin) {
          accountsList = accountsList->next) {
         PurpleAccount *account = (PurpleAccount *)accountsList->data;
         gchar *password;
-        GnomeKeyringResult res;
+        GError *error = NULL;
         /* if the password exists in the keyring, set it in pidgin */
-        res = gnome_keyring_find_password_sync(GNOME_KEYRING_NETWORK_PASSWORD,
-                &password, "user", account->username,
+        password = secret_password_lookup_sync(SECRET_SCHEMA_COMPAT_NETWORK,
+                NULL, &error, "user", account->username,
                 "protocol", account->protocol_id, NULL);
-        if (res == GNOME_KEYRING_RESULT_OK) {
+        if (error != NULL) {
+            fprintf(stderr, "lookup_sync error in plugin_load: %s\n",
+                    error->message);
+            g_error_free(error);
+        } else if (password != NULL) {
             /* set the account to not remember passwords */
             purple_account_set_remember_password(account, FALSE);
             /* temporarily set a fake password, then the real one */
             purple_account_set_password(account, "fakedoopdeedoop");
             purple_account_set_password(account, password);
+            secret_password_free(password);
         }
         else {
             /* add to the list of accounts not found in the keyring */
@@ -76,6 +82,7 @@ static gboolean plugin_load(PurplePlugin *plugin) {
             /* temporarily set a fake password, then the real one again */
             purple_account_set_password(account, "fakedoopdeedoop");
             purple_account_set_password(account, password);
+            g_free(password);
         }
     }
     /* done with the notFound, so free it */
@@ -100,9 +107,9 @@ static void sign_in_cb(PurpleAccount *account, gpointer data) {
      * The callback will check to see if it is already
      * saved in the keyring.
      * This will be run every time an account signs in. */
-    gnome_keyring_find_password(GNOME_KEYRING_NETWORK_PASSWORD,
-            keyring_password_find_cb,
-            account, NULL,
+    secret_password_lookup(SECRET_SCHEMA_COMPAT_NETWORK,
+            NULL, keyring_password_find_cb,
+            account,
 
             "user", account->username,
             "protocol", account->protocol_id,
@@ -111,9 +118,12 @@ static void sign_in_cb(PurpleAccount *account, gpointer data) {
 
 /* callback to gnome keyring password finder
  * Will sync the password between the keyring and pidgin */
-static void keyring_password_find_cb(GnomeKeyringResult res,
-        const gchar *password, gpointer user_data) {
-    PurpleAccount *account = (PurpleAccount *)user_data;
+static void keyring_password_find_cb(GObject *source, GAsyncResult *res,
+        gpointer data) {
+    GError *error = NULL;
+    gchar *password = secret_password_lookup_finish(res, &error);
+
+    PurpleAccount *account = (PurpleAccount *)data;
     gboolean remember = purple_account_get_remember_password(account);
     /* set the purple account to not remember passwords */
     purple_account_set_remember_password(account, FALSE);
@@ -121,7 +131,13 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
      * and the password exists in pidgin
      * and the password was set to be remembered
      */
-    if (res != GNOME_KEYRING_RESULT_OK &&
+    if (error != NULL) {
+        fprintf(stderr, "lookup_finish error in find_cb: %s\n",
+                error->message);
+        g_error_free(error);
+        return;
+    }
+    if (password == NULL &&
         account->password != NULL
         && remember) {
         /* copy it from pidgin to the keyring */
@@ -129,12 +145,15 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
         return;
     }
    /* if the stored passwords do not match */
-    if (res == GNOME_KEYRING_RESULT_OK && account->password != NULL) {
-        if (strcmp(password, account->password) != 0) {
+    if (password != NULL) {
+        if (account->password != NULL &&
+                strcmp(password, account->password) != 0) {
             /* update the keyring with the pidgin password */
             keyring_password_store(account, account->password);
+            secret_password_free(password);
             return;
         }
+        secret_password_free(password);
     }
     /* if this code is excecuted, it means that keyring_password_store was
      * not called, so the memory_clearing_function needs to be called now
@@ -144,14 +163,14 @@ static void keyring_password_find_cb(GnomeKeyringResult res,
 
 /* store a password in the keyring */
 static void keyring_password_store(PurpleAccount *account,
-                                   char *password) {
-    gnome_keyring_store_password(
-            GNOME_KEYRING_NETWORK_PASSWORD,
+                                   gchar *password) {
+    secret_password_store(
+            SECRET_SCHEMA_COMPAT_NETWORK,
             purple_prefs_get_string("/plugins/core/gnome-keyring/keyring_name"),
             "pidgin account password",
-            password, keyring_password_store_cb,
-            account, NULL,
-            
+            password, NULL,
+            keyring_password_store_cb, account,
+
             "user", account->username,
             "protocol", account->protocol_id,
             NULL);
@@ -160,9 +179,19 @@ static void keyring_password_store(PurpleAccount *account,
 /* this is mainly here for stability issues because the program may
  * crash if there is no callback function.
  * It does not actually do anything */
-static void keyring_password_store_cb(GnomeKeyringResult res, gpointer data) {
-    PurpleAccount *account = (PurpleAccount *)data;
-    memory_clearing_function(account);
+static void keyring_password_store_cb(GObject *source, GAsyncResult *res,
+        gpointer data) {
+    GError *error = NULL;
+
+    secret_password_store_finish(res, &error);
+    if (error != NULL) {
+        fprintf(stderr, "store_finish error in store_cb: %s\n",
+                error->message);
+        g_error_free(error);
+    } else {
+        PurpleAccount *account = (PurpleAccount *)data;
+        memory_clearing_function(account);
+    }
     return;
 }
 
@@ -171,7 +200,7 @@ static void memory_clearing_function(PurpleAccount *account) {
                             "/plugins/core/gnome-keyring/clear_memory");
     if (clear_memory) {
         if (account->password != NULL) {
-            free(account->password);
+            g_free(account->password);
             account->password = NULL;
         }
     }
@@ -183,12 +212,18 @@ static void memory_clearing_function(PurpleAccount *account) {
 static void connecting_cb(PurpleAccount *account, gpointer data) {
     if (account->password == NULL) {
         gchar *password;
-        GnomeKeyringResult res = gnome_keyring_find_password_sync(
-            GNOME_KEYRING_NETWORK_PASSWORD, &password,
-            "user", account->username,
-            "protocol", account->protocol_id, NULL);
-        if (res == GNOME_KEYRING_RESULT_OK) {
+        GError *error = NULL;
+
+        password = secret_password_lookup_sync(SECRET_SCHEMA_COMPAT_NETWORK,
+                NULL, &error, "user", account->username,
+                "protocol", account->protocol_id, NULL);
+        if (error != NULL) {
+            fprintf(stderr, "lookup_sync error in connectinb_cb: %s\n",
+                    error->message);
+            g_error_free(error);
+        } else if (password != NULL) {
             purple_account_set_password(account, password);
+            secret_password_free(password);
         }
     }
 }
@@ -256,7 +291,7 @@ static PurplePluginInfo info = {
 static void init_plugin(PurplePlugin *plugin) {                       
     purple_prefs_add_none("/plugins/core/gnome-keyring");
     purple_prefs_add_bool("/plugins/core/gnome-keyring/clear_memory", FALSE);
-    purple_prefs_add_string("/plugins/core/gnome-keyring/keyring_name", GNOME_KEYRING_DEFAULT);
+    purple_prefs_add_string("/plugins/core/gnome-keyring/keyring_name", SECRET_COLLECTION_DEFAULT);
 }
 
 PURPLE_INIT_PLUGIN(gnome-keyring, init_plugin, info)
