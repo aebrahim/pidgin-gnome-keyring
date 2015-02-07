@@ -268,10 +268,10 @@ static PurplePluginInfo info = {
     PURPLE_PRIORITY_HIGHEST,
     
     "core-gnome-keyring",
-    "Gnome Keyring",
+    "Password Keyring",
     VERSION,
-    "Save pidgin passwords to the gnome keyring instead of as plaintext",
-    "Save pidgin passwords to the gnome keyring instead of as plaintext",
+    "Save pidgin passwords to the system keyring instead of as plaintext",
+    "Save pidgin passwords to the system keyring instead of as plaintext",
     "Ali Ebrahim",
     "https://github.com/aebrahim/pidgin-gnome-keyring/",     
     
