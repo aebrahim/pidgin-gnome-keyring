@@ -15,11 +15,11 @@ clean:
 
 ${TARGET}.so: ${TARGET}.c
 
-	${CC} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
+	${CC} ${CFLAGS} ${LDFLAGS} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
 
 install: ${TARGET}.so
-	mkdir -p /usr/lib/purple-2/
-	cp ${TARGET}.so /usr/lib/purple-2/
+	mkdir -p ${DESTDIR}/usr/lib/purple-2/
+	cp ${TARGET}.so ${DESTDIR}/usr/lib/purple-2/
 
 install_local: ${TARGET}.so
 	mkdir -p ~/.purple/plugins
