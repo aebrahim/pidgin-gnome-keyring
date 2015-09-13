@@ -13,9 +13,9 @@ clean:
 	rm -f ${TARGET}.so ${TARGET}_*.tar.gz pidgin-${TARGET}_*.* *.pyc
 	rm -rf pidgin-${TARGET}-*
 
-${TARGET}.so: ${TARGET}.c
+${TARGET}.so: ${TARGET}.c keyring_plugin.c keyring_plugin_defs.h keyring_plugin.h
 
-	${CC} ${CFLAGS} ${LDFLAGS} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
+	${CC} ${CFLAGS} ${LDFLAGS} -Wall -I. -g -O2 ${TARGET}.c keyring_plugin.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
 
 install: ${TARGET}.so
 	mkdir -p ${DESTDIR}/usr/lib/purple-2/
