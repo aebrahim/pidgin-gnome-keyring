@@ -1,0 +1,5 @@
+language: c
+before_install:
+    sudo apt-get install pkg-config libsecret-1-dev libpurple-dev
+script:
+    make
