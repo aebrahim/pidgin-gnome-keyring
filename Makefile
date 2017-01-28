@@ -7,6 +7,8 @@ ifeq ($(strip $(VERSION)),)
 	VERSION = `git describe --tags`
 endif
 
+PLUGINDIRPURPLE:=$(shell pkg-config --variable=plugindir purple)
+
 all: ${TARGET}.so
 
 clean: 
@@ -18,8 +20,8 @@ ${TARGET}.so: ${TARGET}.c
 	${CC} ${CFLAGS} ${LDFLAGS} -Wall -I. -g -O2 ${TARGET}.c -o ${TARGET}.so -shared -fPIC -DPIC -ggdb ${PURPLEFLAGS} ${SECRETFLAGS} -DVERSION=\"${VERSION}\"
 
 install: ${TARGET}.so
-	mkdir -p ${DESTDIR}/usr/lib/purple-2/
-	cp ${TARGET}.so ${DESTDIR}/usr/lib/purple-2/
+	mkdir -p ${DESTDIR}${PLUGINDIRPURPLE}
+	cp ${TARGET}.so ${DESTDIR}${PLUGINDIRPURPLE}
 
 install_local: ${TARGET}.so
 	mkdir -p ~/.purple/plugins
