@@ -155,7 +155,7 @@ static void keyring_password_find_cb(GObject *source, GAsyncResult *res,
         }
         secret_password_free(password);
     }
-    /* if this code is excecuted, it means that keyring_password_store was
+    /* if this code is executed, it means that keyring_password_store was
      * not called, so the memory_clearing_function needs to be called now
      */
     memory_clearing_function(account);
